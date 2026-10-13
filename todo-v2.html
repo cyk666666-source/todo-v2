@@ -64,6 +64,29 @@
         cursor: pointer;
     }
 
+    /* ========== 筛选按钮 ========== */
+    .filters {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .filter-btn {
+        padding: 0.25rem 0.75rem;
+        border: 1px solid #dcdfe6;
+        border-radius: 0.25rem;
+        background: #fff;
+        color: #555;
+        font-size: 0.8125rem;
+        cursor: pointer;
+    }
+
+    .filter-btn.active {
+        border-color: #3498db;
+        background: #ecf5fc;
+        color: #2980b9;
+    }
+
     /* ========== 列表 ========== */
     #todo-list {
         list-style: none;
@@ -119,6 +142,13 @@
         <button id="add-btn">添加</button>
     </div>
 
+    <!-- 筛选区：三个硬编码按钮，data-filter 标明各自的视图 -->
+    <div class="filters">
+        <button class="filter-btn active" data-filter="all">全部</button>
+        <button class="filter-btn" data-filter="active">进行中</button>
+        <button class="filter-btn" data-filter="done">已完成</button>
+    </div>
+
     <!-- 列表容器：内容全部由 render() 根据 todos 生成 -->
     <ul id="todo-list"></ul>
 
@@ -128,16 +158,26 @@
             const list   = document.querySelector('#todo-list');   /* 列表容器 */
             const input  = document.querySelector('#todo-input');
             const addBtn = document.querySelector('#add-btn');
+            const filterBtns = document.querySelectorAll('.filter-btn');
 
-            let todos = [];   /* 单一数据源：所有任务都记在这个数组里 */
+            let todos  = [];       /* 单一数据源：所有任务都记在这个数组里 */
+            let filter = 'all';    /* 视图状态：只影响显示，不需要持久化 */
 
             /**
-             * 渲染：DOM 是 todos 的投影。先清空旧列表，再整表重画。
+             * 渲染：DOM 是 todos 的投影。
+             * 先按 filter 过滤出「要显示哪些」，再整表重画；不修改 todos 本身。
              */
             function render() {
                 list.textContent = '';   /* 清空旧列表 → 整体重画 */
 
-                todos.forEach(function (t) {
+                /* 先过滤：决定「显示哪些」，todos 保持不变 */
+                const shown = todos.filter(function (t) {
+                    if (filter === 'done')   return t.completed;
+                    if (filter === 'active') return !t.completed;
+                    return true;             /* filter === 'all' */
+                });
+
+                shown.forEach(function (t) {
                     const li = document.createElement('li');
                     li.dataset.id = t.id;                 /* 让 li 记住自己的 id，后续靠它定位 */
                     if (t.completed) li.classList.add('done');
@@ -196,6 +236,19 @@
             }
 
             /**
+             * 切换筛选视图：只改视图状态并重渲染，不需要 save()。
+             * @param {string} f 'all' | 'active' | 'done'
+             */
+            function setFilter(f) {
+                filter = f;
+                /* 同步按钮高亮：当前视图高亮，其余取消 */
+                filterBtns.forEach(function (btn) {
+                    btn.classList.toggle('active', btn.dataset.filter === f);
+                });
+                render();
+            }
+
+            /**
              * 清空所有已完成的任务（脱离 AI 小改，独立完成）。
              * 保留 id 对应 completed 为 false 的项 → filter → render。
              */
@@ -212,6 +265,13 @@
                 if (text === '') return;   /* 边界检查：空串 / 纯空格都不添加 */
                 addTodo(text);
                 input.value = '';
+            });
+
+            /* 三个筛选按钮：点击时切换到对应视图 */
+            filterBtns.forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    setFilter(btn.dataset.filter);
+                });
             });
 
             /* 页面加载后先按现有数据渲染一次 */
