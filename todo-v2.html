@@ -155,13 +155,39 @@
     <script>
         /* 用块级作用域把脚本包起来：变量不会泄漏成全局（L4 全局污染） */
         {
-            const list   = document.querySelector('#todo-list');   /* 列表容器 */
-            const input  = document.querySelector('#todo-input');
-            const addBtn = document.querySelector('#add-btn');
+            const KEY = 'todos';                                   /* ① localStorage 的键名 */
+            const list     = document.querySelector('#todo-list'); /* ② 列表容器 */
+            const input    = document.querySelector('#todo-input');
+            const addBtn   = document.querySelector('#add-btn');
             const filterBtns = document.querySelectorAll('.filter-btn');
 
-            let todos  = [];       /* 单一数据源：所有任务都记在这个数组里 */
-            let filter = 'all';    /* 视图状态：只影响显示，不需要持久化 */
+            let todos  = load();   /* ③ 单一数据源：所有任务都记在这个数组里（启动时从本地读取） */
+            let filter = 'all';    /* ④ 视图状态：只影响显示，不需要持久化 */
+
+            /**
+             * 保存：把当前的 todos 序列化成 JSON 字符串写进 localStorage。
+             * 不序列化直接存对象，会变成 "[object Object]"。
+             */
+            function save() {
+                localStorage.setItem(KEY, JSON.stringify(todos));
+            }
+
+            /**
+             * 读取：从 localStorage 取出并解析 todos。
+             * 没存过（null）就返回空数组；解析失败也回退成空数组，避免整页崩掉。
+             * @returns {Array} 任务数组
+             */
+            function load() {
+                const raw = localStorage.getItem(KEY);
+                if (raw === null) return [];
+                try {
+                    const data = JSON.parse(raw);
+                    return Array.isArray(data) ? data : [];
+                } catch (err) {
+                    console.error('localStorage 中的数据不是合法 JSON，已重置为空列表', err);
+                    return [];
+                }
+            }
 
             /**
              * 渲染：DOM 是 todos 的投影。
@@ -207,11 +233,12 @@
             }
 
             /**
-             * 添加：用展开运算符生成新数组（不改原数组），再重渲染。
+             * 添加：用展开运算符生成新数组（不改原数组），再保存、重渲染。
              * @param {string} text 已去空白的任务文本
              */
             function addTodo(text) {
                 todos = [...todos, { id: Date.now(), text: text, completed: false }];
+                save();
                 render();
             }
 
@@ -221,6 +248,7 @@
              */
             function removeTodo(id) {
                 todos = todos.filter(function (t) { return t.id !== id; });
+                save();
                 render();
             }
 
@@ -232,6 +260,7 @@
                 todos = todos.map(function (t) {
                     return t.id === id ? { ...t, completed: !t.completed } : t;
                 });
+                save();
                 render();
             }
 
@@ -254,6 +283,7 @@
              */
             function clearCompleted() {
                 todos = todos.filter(function (t) { return !t.completed; });
+                save();
                 render();
             }
 
