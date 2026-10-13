@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Todo 列表 V2.0 基础版（修正版）</title>
+<style>
+    /* ========== 基础 ========== */
+    *,
+    *::before,
+    *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    html {
+        font-size: 16px;
+        background: #eef1f5;
+    }
+
+    body {
+        max-width: 30rem;
+        margin: 1.875rem auto;
+        padding: 1.5rem;
+        background: #fff;
+        border-radius: 0.5rem;
+        box-shadow: 0 0.25rem 1.25rem rgba(0, 0, 0, .08);
+        font-family: "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+        line-height: 1.6;
+        color: #333;
+    }
+
+    h1 {
+        font-size: 1.25rem;
+        color: #2c3e50;
+        margin-bottom: 1rem;
+    }
+
+    /* ========== 输入区 ========== */
+    .todo-form {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    #todo-input {
+        flex: 1 1 auto;
+        min-width: 0;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #dcdfe6;
+        border-radius: 0.25rem;
+        font-size: 0.9375rem;
+    }
+
+    #add-btn {
+        flex: 0 0 auto;
+        padding: 0.5rem 1rem;
+        border: 0;
+        border-radius: 0.25rem;
+        background: #3498db;
+        color: #fff;
+        font-size: 0.9375rem;
+        cursor: pointer;
+    }
+
+    /* ========== 列表 ========== */
+    #todo-list {
+        list-style: none;
+    }
+
+    #todo-list li {
+        padding: 0.5rem 0.75rem;
+        margin-bottom: 0.375rem;
+        background: #f7f9fc;
+        border-left: 0.1875rem solid #3498db;
+        border-radius: 0.25rem;
+        font-size: 0.9375rem;
+    }
+</style>
+</head>
+<body>
+
+    <h1>Todo 列表 · V2.0 基础版</h1>
+
+    <div class="todo-form">
+        <input type="text" id="todo-input" placeholder="输入待办事项">
+        <button id="add-btn">添加</button>
+    </div>
+
+    <ul id="todo-list"></ul>
+
+    <script>
+        /* 用一对大括号包出块级作用域：const/let 只在块内可见，
+           既符合“const 优先”，又不会把变量泄漏成全局（L4 全局污染） */
+        {
+            const input = document.querySelector('#todo-input');
+            const addBtn = document.querySelector('#add-btn');
+            const todoList = document.querySelector('#todo-list');
+
+            /* 一查执行条件：三个元素缺一不可，缺了就直接停下并给出提示，
+               避免对 null 调用 addEventListener / appendChild 抛错中断脚本 */
+            if (!input || !addBtn || !todoList) {
+                console.error('Todo 列表所需的 DOM 元素不完整，脚本已停止');
+            } else {
+                /* 数据源：先有数据，再由数据渲染出 DOM。
+                   第 7 周的删除 / 过滤 / 持久化都可以直接基于这个数组做 */
+                const todos = [];
+
+                /**
+                 * 把 todos 数组整体渲染成列表项（数据 → DOM）
+                 */
+                function renderTodos() {
+                    todoList.textContent = '';   /* 清空现有列表项 */
+                    todos.forEach(function (text) {
+                        const li = document.createElement('li');
+                        li.textContent = text;   /* 纯文本插入，字符串不会被当作 HTML 解析 */
+                        todoList.appendChild(li);
+                    });
+                }
+
+                addBtn.addEventListener('click', function () {
+                    const text = input.value.trim();   /* 去掉两端空白 */
+                    if (text === '') return;           /* 边界检查：空 / 纯空格都不添加 */
+                    todos.push(text);
+                    renderTodos();
+                    input.value = '';                  /* 清空输入框 */
+                });
+            }
+        }
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,10 @@
+# 课程资料与办公文档，不纳入版本控制
+*.pptx
+*.docx
+~$*
+
+# 系统与编辑器临时文件
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
