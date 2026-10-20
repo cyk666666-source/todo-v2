@@ -217,20 +217,12 @@
                     span.textContent = t.text;            /* 纯文本插入，不解析 HTML */
                     li.appendChild(span);
 
-                    /* 点击整行：切换完成状态（本阶段仍是每个 li 各绑一次，下一步改为父容器接管） */
-                    li.addEventListener('click', function () {
-                        toggleTodo(t.id);
-                    });
-
-                    /* 删除按钮：阻止冒泡，避免顺带触发 li 的点击 */
+                    /* 删除按钮：只负责「长什么样、代表什么操作」，
+                       不再在这里绑监听器 —— 交互统一交给父容器 ul */
                     const delBtn = document.createElement('button');
                     delBtn.className = 'del-btn';
                     delBtn.dataset.action = 'delete';     /* ② 标记操作类型 */
                     delBtn.textContent = '×';
-                    delBtn.addEventListener('click', function (e) {
-                        e.stopPropagation();
-                        removeTodo(t.id);
-                    });
                     li.appendChild(delBtn);
 
                     list.appendChild(li);
@@ -307,6 +299,22 @@
                 btn.addEventListener('click', function () {
                     setFilter(btn.dataset.filter);
                 });
+            });
+
+            /* 父容器统一接管所有 li 的点击：
+               监听器只绑一次，不随 render() 重画而消失，新增节点自动拥有交互 */
+            list.addEventListener('click', function (e) {
+                if (!(e.target instanceof Element)) return;      /* ① 防：target 不是元素 */
+                const item = e.target.closest('li');
+                if (!item || !list.contains(item)) return;       /* ② 防：点空白 → null；③ 防：越界 */
+                const id = Number(item.dataset.id);              /* dataset 存的是字符串，转回数字 */
+                if (!id) return;                                 /* ④ 防：没有 data-id / 非法 id */
+
+                const delBtn = e.target.closest('[data-action="delete"]');
+                if (delBtn && item.contains(delBtn)) {
+                    removeTodo(id);
+                }
+                toggleTodo(id);
             });
 
             /* 页面加载后先按现有数据渲染一次 */
