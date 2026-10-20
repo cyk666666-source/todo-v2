@@ -132,6 +132,19 @@
         line-height: 1;
         cursor: pointer;
     }
+
+    #todo-list li .edit-btn {
+        flex: 0 0 auto;
+        width: 1.25rem;
+        height: 1.25rem;
+        border: 0;
+        border-radius: 50%;
+        background: #f39c12;
+        color: #fff;
+        font-size: 0.75rem;
+        line-height: 1;
+        cursor: pointer;
+    }
 </style>
 </head>
 <body>
@@ -217,6 +230,13 @@
                     span.textContent = t.text;            /* 纯文本插入，不解析 HTML */
                     li.appendChild(span);
 
+                    /* 编辑按钮：同样只标注操作类型，点击后由父容器分流 */
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'edit-btn';
+                    editBtn.dataset.action = 'edit';
+                    editBtn.textContent = '改';
+                    li.appendChild(editBtn);
+
                     /* 删除按钮：只负责「长什么样、代表什么操作」，
                        不再在这里绑监听器 —— 交互统一交给父容器 ul */
                     const delBtn = document.createElement('button');
@@ -256,6 +276,19 @@
             function toggleTodo(id) {
                 todos = todos.map(function (t) {
                     return t.id === id ? { ...t, completed: !t.completed } : t;
+                });
+                save();
+                render();
+            }
+
+            /**
+             * 修改任务文本：用 map + 展开只替换被编辑那条的 text，其余原样返回。
+             * @param {number} id 要修改的任务 id
+             * @param {string} text 已去空白的新文本
+             */
+            function updateTodo(id, text) {
+                todos = todos.map(function (t) {
+                    return t.id === id ? { ...t, text: text } : t;
                 });
                 save();
                 render();
@@ -311,17 +344,27 @@
                 if (!id) return;                                 /* ④ 防：没有 data-id / 非法 id */
 
                 const delBtn = e.target.closest('[data-action="delete"]');
+                const editBtn = e.target.closest('[data-action="edit"]');
                 if (delBtn && item.contains(delBtn)) {
-                    removeTodo(id);
+                    removeTodo(id);                              /* 删除与切换互斥，分流后不再往下走 */
+                } else if (editBtn && item.contains(editBtn)) {
+                    const target = todos.find(function (t) { return t.id === id; });
+                    if (!target) return;
+                    const newText = prompt('修改任务', target.text);
+                    if (newText === null) return;                /* 用户点了取消 → 不改 */
+                    const trimmed = newText.trim();
+                    if (trimmed === '') return;                  /* 边界：空输入 / 纯空格 → 不改 */
+                    updateTodo(id, trimmed);
+                } else {
+                    toggleTodo(id);                              /* 只有点正文才切换完成状态 */
                 }
-                toggleTodo(id);
             });
 
             /* 页面加载后先按现有数据渲染一次 */
             render();
 
             /* 暴露到控制台以便测试（不影响生产逻辑） */
-            window.TodoApp = { addTodo: addTodo, removeTodo: removeTodo, toggleTodo: toggleTodo, clearCompleted: clearCompleted };
+            window.TodoApp = { addTodo: addTodo, removeTodo: removeTodo, toggleTodo: toggleTodo, updateTodo: updateTodo, clearCompleted: clearCompleted };
         }
     </script>
 
