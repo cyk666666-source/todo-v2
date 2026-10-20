@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Todo 列表 V3.0 事件委托版</title>
+<style>
+    /* ========== 基础 ========== */
+    *,
+    *::before,
+    *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    html {
+        font-size: 16px;
+        background: #eef1f5;
+    }
+
+    body {
+        max-width: 30rem;
+        margin: 1.875rem auto;
+        padding: 1.5rem;
+        background: #fff;
+        border-radius: 0.5rem;
+        box-shadow: 0 0.25rem 1.25rem rgba(0, 0, 0, .08);
+        font-family: "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+        line-height: 1.6;
+        color: #333;
+    }
+
+    h1 {
+        font-size: 1.25rem;
+        color: #2c3e50;
+        margin-bottom: 1rem;
+    }
+
+    /* ========== 输入区 ========== */
+    .todo-form {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    #todo-input {
+        flex: 1 1 auto;
+        min-width: 0;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #dcdfe6;
+        border-radius: 0.25rem;
+        font-size: 0.9375rem;
+    }
+
+    #add-btn {
+        flex: 0 0 auto;
+        padding: 0.5rem 1rem;
+        border: 0;
+        border-radius: 0.25rem;
+        background: #3498db;
+        color: #fff;
+        font-size: 0.9375rem;
+        cursor: pointer;
+    }
+
+    /* ========== 筛选按钮 ========== */
+    .filters {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .filter-btn {
+        padding: 0.25rem 0.75rem;
+        border: 1px solid #dcdfe6;
+        border-radius: 0.25rem;
+        background: #fff;
+        color: #555;
+        font-size: 0.8125rem;
+        cursor: pointer;
+    }
+
+    .filter-btn.active {
+        border-color: #3498db;
+        background: #ecf5fc;
+        color: #2980b9;
+    }
+
+    /* ========== 列表 ========== */
+    #todo-list {
+        list-style: none;
+        min-height: 3rem;       /* 留出列表内部的空白区域，用于验证「点空白处」边界 */
+        padding: 0.25rem 0;
+    }
+
+    #todo-list li {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        margin-bottom: 0.375rem;
+        background: #f7f9fc;
+        border-left: 0.1875rem solid #3498db;
+        border-radius: 0.25rem;
+        font-size: 0.9375rem;
+        cursor: pointer;
+    }
+
+    /* 已完成的项：加删除线并变灰 */
+    #todo-list li.done {
+        border-left-color: #b0b8c1;
+        color: #98a1ab;
+        text-decoration: line-through;
+    }
+
+    /* 列表项文字占满剩余空间，把操作按钮挤到最右 */
+    #todo-list li .text {
+        flex: 1 1 auto;
+        word-break: break-all;
+    }
+
+    #todo-list li .del-btn {
+        flex: 0 0 auto;
+        width: 1.25rem;
+        height: 1.25rem;
+        border: 0;
+        border-radius: 50%;
+        background: #e74c3c;
+        color: #fff;
+        font-size: 0.8125rem;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    #todo-list li .edit-btn {
+        flex: 0 0 auto;
+        width: 1.25rem;
+        height: 1.25rem;
+        border: 0;
+        border-radius: 50%;
+        background: #f39c12;
+        color: #fff;
+        font-size: 0.75rem;
+        line-height: 1;
+        cursor: pointer;
+    }
+</style>
+</head>
+<body>
+
+    <h1>Todo 列表 · V3.0 事件委托版</h1>
+
+    <!-- 输入区：文本输入框 + 添加按钮 -->
+    <div class="todo-form">
+        <input type="text" id="todo-input" placeholder="输入待办事项">
+        <button id="add-btn">添加</button>
+    </div>
+
+    <!-- 筛选区：三个硬编码按钮，data-filter 标明各自的视图 -->
+    <div class="filters">
+        <button class="filter-btn active" data-filter="all">全部</button>
+        <button class="filter-btn" data-filter="active">进行中</button>
+        <button class="filter-btn" data-filter="done">已完成</button>
+    </div>
+
+    <!-- 列表容器：内容全部由 render() 根据 todos 生成 -->
+    <ul id="todo-list"></ul>
+
+    <script>
+        /* 用块级作用域把脚本包起来：变量不会泄漏成全局（L4 全局污染） */
+        {
+            const KEY = 'todos';                                   /* ① localStorage 的键名 */
+            const list     = document.querySelector('#todo-list'); /* ② 列表容器 */
+            const input    = document.querySelector('#todo-input');
+            const addBtn   = document.querySelector('#add-btn');
+            const filterBtns = document.querySelectorAll('.filter-btn');
+
+            let todos  = load();   /* ③ 单一数据源：所有任务都记在这个数组里（启动时从本地读取） */
+            let filter = 'all';    /* ④ 视图状态：只影响显示，不需要持久化 */
+
+            /**
+             * 保存：把当前的 todos 序列化成 JSON 字符串写进 localStorage。
+             * 不序列化直接存对象，会变成 "[object Object]"。
+             */
+            function save() {
+                localStorage.setItem(KEY, JSON.stringify(todos));
+            }
+
+            /**
+             * 读取：从 localStorage 取出并解析 todos。
+             * 没存过（null）就返回空数组；解析失败也回退成空数组，避免整页崩掉。
+             * @returns {Array} 任务数组
+             */
+            function load() {
+                const raw = localStorage.getItem(KEY);
+                if (raw === null) return [];
+                try {
+                    const data = JSON.parse(raw);
+                    return Array.isArray(data) ? data : [];
+                } catch (err) {
+                    console.error('localStorage 中的数据不是合法 JSON，已重置为空列表', err);
+                    return [];
+                }
+            }
+
+            /**
+             * 渲染：DOM 是 todos 的投影。
+             * 先按 filter 过滤出「要显示哪些」，再整表重画；不修改 todos 本身。
+             * 每个 li 写入 dataset.id、每个操作按钮写入 data-action，
+             * 让 DOM 自己记住「我是哪条数据、我是什么操作」，为事件委托做准备。
+             */
+            function render() {
+                list.textContent = '';   /* 清空旧列表 → 整体重画 */
+
+                /* 先过滤：决定「显示哪些」，todos 保持不变 */
+                const shown = todos.filter(function (t) {
+                    if (filter === 'done')   return t.completed;
+                    if (filter === 'active') return !t.completed;
+                    return true;             /* filter === 'all' */
+                });
+
+                shown.forEach(function (t) {
+                    const li = document.createElement('li');
+                    li.dataset.id = t.id;                 /* ① 让 li 记住自己的 id，后续靠它定位 */
+                    if (t.completed) li.classList.add('done');
+
+                    const span = document.createElement('span');
+                    span.className = 'text';
+                    span.textContent = t.text;            /* 纯文本插入，不解析 HTML */
+                    li.appendChild(span);
+
+                    /* 编辑按钮：同样只标注操作类型，点击后由父容器分流 */
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'edit-btn';
+                    editBtn.dataset.action = 'edit';
+                    editBtn.textContent = '改';
+                    li.appendChild(editBtn);
+
+                    /* 删除按钮：只负责「长什么样、代表什么操作」，
+                       不再在这里绑监听器 —— 交互统一交给父容器 ul */
+                    const delBtn = document.createElement('button');
+                    delBtn.className = 'del-btn';
+                    delBtn.dataset.action = 'delete';     /* ② 标记操作类型 */
+                    delBtn.textContent = '×';
+                    li.appendChild(delBtn);
+
+                    list.appendChild(li);
+                });
+            }
+
+            /**
+             * 添加：用展开运算符生成新数组（不改原数组），再保存、重渲染。
+             * @param {string} text 已去空白的任务文本
+             */
+            function addTodo(text) {
+                todos = [...todos, { id: Date.now(), text: text, completed: false }];
+                save();
+                render();
+            }
+
+            /**
+             * 删除：用 filter 留下「id 不等于目标」的项，生成新数组。
+             * @param {number} id 要删除的任务 id
+             */
+            function removeTodo(id) {
+                todos = todos.filter(function (t) { return t.id !== id; });
+                save();
+                render();
+            }
+
+            /**
+             * 切换完成状态：用 map + 展开只生成被点击那条的新对象，其余原样返回。
+             * @param {number} id 要切换的任务 id
+             */
+            function toggleTodo(id) {
+                todos = todos.map(function (t) {
+                    return t.id === id ? { ...t, completed: !t.completed } : t;
+                });
+                save();
+                render();
+            }
+
+            /**
+             * 修改任务文本：用 map + 展开只替换被编辑那条的 text，其余原样返回。
+             * @param {number} id 要修改的任务 id
+             * @param {string} text 已去空白的新文本
+             */
+            function updateTodo(id, text) {
+                todos = todos.map(function (t) {
+                    return t.id === id ? { ...t, text: text } : t;
+                });
+                save();
+                render();
+            }
+
+            /**
+             * 切换筛选视图：只改视图状态并重渲染，不需要 save()。
+             * @param {string} f 'all' | 'active' | 'done'
+             */
+            function setFilter(f) {
+                filter = f;
+                /* 同步按钮高亮：当前视图高亮，其余取消 */
+                filterBtns.forEach(function (btn) {
+                    btn.classList.toggle('active', btn.dataset.filter === f);
+                });
+                render();
+            }
+
+            /**
+             * 清空所有已完成的任务（脱离 AI 小改，独立完成）。
+             * 保留 id 对应 completed 为 false 的项 → filter → render。
+             */
+            function clearCompleted() {
+                todos = todos.filter(function (t) { return !t.completed; });
+                save();
+                render();
+            }
+
+            /* ========== 事件绑定 ========== */
+
+            /* 点击「添加」：读输入 → 去空白 → 判空 → 入数据 → 重渲染 → 清空输入框 */
+            addBtn.addEventListener('click', function () {
+                const text = input.value.trim();
+                if (text === '') return;   /* 边界检查：空串 / 纯空格都不添加 */
+                addTodo(text);
+                input.value = '';
+            });
+
+            /* 三个筛选按钮：点击时切换到对应视图 */
+            filterBtns.forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    setFilter(btn.dataset.filter);
+                });
+            });
+
+            /* 父容器统一接管所有 li 的点击：
+               监听器只绑一次，不随 render() 重画而消失，新增节点自动拥有交互 */
+            list.addEventListener('click', function (e) {
+                if (!(e.target instanceof Element)) return;      /* ① 防：target 不是元素 */
+                const item = e.target.closest('li');
+                if (!item || !list.contains(item)) return;       /* ② 防：点空白 → null；③ 防：越界 */
+                const id = Number(item.dataset.id);              /* dataset 存的是字符串，转回数字 */
+                if (!id) return;                                 /* ④ 防：没有 data-id / 非法 id */
+
+                const delBtn = e.target.closest('[data-action="delete"]');
+                const editBtn = e.target.closest('[data-action="edit"]');
+                if (delBtn && item.contains(delBtn)) {
+                    removeTodo(id);                              /* 删除与切换互斥，分流后不再往下走 */
+                } else if (editBtn && item.contains(editBtn)) {
+                    const target = todos.find(function (t) { return t.id === id; });
+                    if (!target) return;
+                    const newText = prompt('修改任务', target.text);
+                    if (newText === null) return;                /* 用户点了取消 → 不改 */
+                    const trimmed = newText.trim();
+                    if (trimmed === '') return;                  /* 边界：空输入 / 纯空格 → 不改 */
+                    updateTodo(id, trimmed);
+                } else {
+                    toggleTodo(id);                              /* 只有点正文才切换完成状态 */
+                }
+            });
+
+            /* 页面加载后先按现有数据渲染一次 */
+            render();
+
+            /* 暴露到控制台以便测试（不影响生产逻辑） */
+            window.TodoApp = { addTodo: addTodo, removeTodo: removeTodo, toggleTodo: toggleTodo, updateTodo: updateTodo, clearCompleted: clearCompleted };
+        }
+    </script>
+
+</body>
+</html>
