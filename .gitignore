@@ -8,3 +8,7 @@ Thumbs.db
 desktop.ini
 .vscode/
 .idea/
+
+# Node.js 依赖与运行产物（npm install 生成，不入库）
+node_modules/
+dist/
