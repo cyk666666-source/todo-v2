@@ -1,0 +1,140 @@
+/* ========== 基础 ========== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  background: #eef1f5;
+}
+
+body {
+  max-width: 30rem;
+  margin: 1.875rem auto;
+  padding: 1.5rem;
+  background: #fff;
+  border-radius: 0.5rem;
+  box-shadow: 0 0.25rem 1.25rem rgba(0, 0, 0, 0.08);
+  font-family: "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+  line-height: 1.6;
+  color: #333;
+}
+
+h1 {
+  font-size: 1.25rem;
+  color: #2c3e50;
+  margin-bottom: 1rem;
+}
+
+/* ========== 输入区 ========== */
+.todo-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+#todo-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #dcdfe6;
+  border-radius: 0.25rem;
+  font-size: 0.9375rem;
+}
+
+#add-btn {
+  flex: 0 0 auto;
+  padding: 0.5rem 1rem;
+  border: 0;
+  border-radius: 0.25rem;
+  background: #3498db;
+  color: #fff;
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+
+/* ========== 筛选按钮 ========== */
+.filters {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.filter-btn {
+  padding: 0.25rem 0.75rem;
+  border: 1px solid #dcdfe6;
+  border-radius: 0.25rem;
+  background: #fff;
+  color: #555;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.filter-btn.active {
+  border-color: #3498db;
+  background: #ecf5fc;
+  color: #2980b9;
+}
+
+/* ========== 列表 ========== */
+#todo-list {
+  list-style: none;
+  min-height: 3rem; /* 留出列表内部的空白区域，用于验证「点空白处」边界 */
+  padding: 0.25rem 0;
+}
+
+#todo-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.375rem;
+  background: #f7f9fc;
+  border-left: 0.1875rem solid #3498db;
+  border-radius: 0.25rem;
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+
+/* 已完成的项：加删除线并变灰 */
+#todo-list li.done {
+  border-left-color: #b0b8c1;
+  color: #98a1ab;
+  text-decoration: line-through;
+}
+
+/* 列表项文字占满剩余空间，把操作按钮挤到最右 */
+#todo-list li .text {
+  flex: 1 1 auto;
+  word-break: break-all;
+}
+
+#todo-list li .del-btn {
+  flex: 0 0 auto;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 0;
+  border-radius: 50%;
+  background: #e74c3c;
+  color: #fff;
+  font-size: 0.8125rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+#todo-list li .edit-btn {
+  flex: 0 0 auto;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 0;
+  border-radius: 50%;
+  background: #f39c12;
+  color: #fff;
+  font-size: 0.75rem;
+  line-height: 1;
+  cursor: pointer;
+}

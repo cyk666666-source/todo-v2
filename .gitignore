@@ -12,3 +12,10 @@ desktop.ini
 # Node.js 依赖与运行产物（npm install 生成，不入库）
 node_modules/
 dist/
+coverage/
+
+# 本地环境配置：只忽略真实的 .env，保留配置模板
+.env
+.env.local
+.env.*.local
+!.env.example

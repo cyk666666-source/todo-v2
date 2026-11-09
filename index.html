@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Todo 列表 V3.0 · Vite 工程版</title>
+  </head>
+  <body>
+    <h1>Todo 列表 · V3.0 Vite 工程版</h1>
+
+    <!-- 输入区：文本输入框 + 添加按钮 -->
+    <div class="todo-form">
+      <input type="text" id="todo-input" placeholder="输入待办事项" />
+      <button id="add-btn">添加</button>
+    </div>
+
+    <!-- 筛选区：data-filter 标明各自的视图 -->
+    <div class="filters">
+      <button class="filter-btn active" data-filter="all">全部</button>
+      <button class="filter-btn" data-filter="active">进行中</button>
+      <button class="filter-btn" data-filter="done">已完成</button>
+    </div>
+
+    <!-- 列表容器：内容全部由 render() 根据 todos 生成 -->
+    <ul id="todo-list"></ul>
+
+    <!-- 入口是 HTML，不是 main.ts -->
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

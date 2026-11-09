@@ -12,6 +12,8 @@
  *   4. localStorage 是外部脏数据入口 → JSON.parse 之后逐条做运行时校验。
  */
 
+import './style.css';
+
 import {
   Todo,
   addTodo,
@@ -43,7 +45,7 @@ const input = document.querySelector<HTMLInputElement>('#todo-input');
 const addBtn = document.querySelector<HTMLElement>('#add-btn');
 const filterBtns = document.querySelectorAll<HTMLButtonElement>('.filter-btn');
 
-let todos: Todo[] = load();                  // 单一数据源
+const todos: Todo[] = load();                // 单一数据源（只改内容，不换引用）
 let filter: Filter = 'all';                  // 视图状态：不需要持久化
 
 /* ========== 持久化（含运行时校验） ========== */
@@ -142,37 +144,62 @@ function onAddClick(): void {
   input.value = '';
 }
 
+/** 点击命中的目标：已收窄的元素、所在列表项、合法 id。 */
+interface ClickTarget {
+  clicked: HTMLElement;
+  item: Element;
+  id: number;
+}
+
+/**
+ * 事件委托的第一道处理：类型收窄 → 空值收窄 → id 校验。
+ * 任一步失败返回 null；原先散在 onListClick 里的三道防线集中在这里。
+ */
+function resolveTarget(e: MouseEvent): ClickTarget | null {
+  if (!(e.target instanceof HTMLElement)) return null;     // ① 不是元素直接退出
+  const item = e.target.closest('li');
+  if (item === null || list === null || !list.contains(item)) return null; // ② 点空白 / 越界
+  const id = parseId(item.dataset.id);                     // ③ string → number | null
+  if (id === null) return null;
+  return { clicked: e.target, item, id };
+}
+
+/** 删除：与切换互斥，只删不切换。 */
+function handleDelete(id: number): void {
+  removeTodo(todos, id);
+  save();
+  render();
+}
+
+/** 修改：用户点取消（null）不改；空串/纯空格的拦截仍在数据层。 */
+function handleEdit(id: number): void {
+  const target = todos.find(function (t) {
+    return t.id === id;
+  });
+  if (target === undefined) return;
+  const newText = prompt('修改任务', target.text);
+  if (newText === null) return;
+  updateTodo(todos, id, newText);
+  save();
+  render();
+}
+
 /**
  * 列表点击：事件委托。
- * 事件对象的类型坑按「先收窄、再转换」的顺序处理：
- *   ① e.target 是 EventTarget → instanceof HTMLElement 收窄后才有 dataset；
- *   ② closest('li') 点空白处返回 null → 判空；
- *   ③ dataset.id 是 string → parseId() 转换 + 校验，不做 as 硬转。
+ * 目标解析与具体动作都下沉到具名函数，本函数只负责「分流」。
  */
 function onListClick(e: MouseEvent): void {
-  if (list === null) return;                               // 列表容器不存在：安静退出
-  if (!(e.target instanceof HTMLElement)) return;          // ① 类型收窄：不是元素直接返回
-  const item = e.target.closest('li');
-  if (item === null || !list.contains(item)) return;       // ② 空值收窄：点空白 / 越界
-  const id = parseId(item.dataset.id);                     // ③ 脏数据入口：string → number | null
-  if (id === null) return;
+  const target = resolveTarget(e);
+  if (target === null) return;
 
-  const delBtn = e.target.closest('[data-action="delete"]');
-  const editBtn = e.target.closest('[data-action="edit"]');
-  if (delBtn !== null && item.contains(delBtn)) {
-    removeTodo(todos, id);                                 // 删除与切换互斥
-    save();
-    render();
-  } else if (editBtn !== null && item.contains(editBtn)) {
-    const target = todos.find(function (t) { return t.id === id; });
-    if (target === undefined) return;
-    const newText = prompt('修改任务', target.text);
-    if (newText === null) return;                          // 用户点了取消 → 不改
-    updateTodo(todos, id, newText);                        // 空串/纯空格的拦截在数据层
-    save();
-    render();
+  const delBtn = target.clicked.closest('[data-action="delete"]');
+  const editBtn = target.clicked.closest('[data-action="edit"]');
+  if (delBtn !== null && target.item.contains(delBtn)) {
+    handleDelete(target.id);
+  } else if (editBtn !== null && target.item.contains(editBtn)) {
+    handleEdit(target.id);
   } else {
-    toggleTodo(todos, id);                                 // 点正文：切换完成状态
+    toggleTodo(todos, target.id);                          // 点正文：切换完成状态
     save();
     render();
   }

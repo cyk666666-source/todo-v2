@@ -22,7 +22,7 @@ test('正常添加：文本内容正确（替换 AI 的弱断言）', () => {
 });
 
 /* 维度1（空值）：AI 遗漏，手写补上。
-   测试专用 as any：模拟「运行时传进来的脏数据」，不属于生产代码的红线范围 */
+   测试专用双重断言 null as unknown as string：模拟运行时脏数据，不属于生产代码红线 */
 test('维度1（空值）：null 应被拦截', () => {
   const todos: Todo[] = [];
   addTodo(todos, null as unknown as string);
